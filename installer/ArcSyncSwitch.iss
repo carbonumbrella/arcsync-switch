@@ -12,7 +12,7 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher=carbonumbrella
-AppComments=Переключатель профилей Intel Arc Sync (VRR) и флагов LFC для MSI Claw
+AppComments={cm:AppComments}
 DefaultDirName={localappdata}\Programs\ArcSyncSwitch
 DisableProgramGroupPage=yes
 DisableDirPage=auto
@@ -34,9 +34,31 @@ CloseApplications=no
 Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+ru.AppComments=Переключатель профилей Intel Arc Sync (VRR) и флагов LFC для MSI Claw
+ru.TaskAutostart=Применять режим VRR и LFC при входе в Windows
+ru.TaskGroupExtra=Дополнительно:
+ru.TaskDesktop=Ярлык на рабочем столе
+ru.RunOpen=Открыть ArcSyncSwitch
+ru.DlTitle=Загрузка .NET 10
+ru.DlDesc=Для работы нужна среда .NET 10 Desktop Runtime от Microsoft.
+ru.DlFail=Не удалось скачать .NET 10:
+ru.DlManual=Установите .NET 10 Desktop Runtime вручную с dotnet.microsoft.com.
+ru.InstallFail=.NET 10 не установился (код
+en.AppComments=Intel Arc Sync (VRR) and LFC profile switcher for MSI Claw
+en.TaskAutostart=Apply VRR and LFC profile at Windows logon
+en.TaskGroupExtra=Additional options:
+en.TaskDesktop=Create desktop shortcut
+en.RunOpen=Launch ArcSyncSwitch
+en.DlTitle=Downloading .NET 10
+en.DlDesc=.NET 10 Desktop Runtime from Microsoft is required.
+en.DlFail=Failed to download .NET 10:
+en.DlManual=Install .NET 10 Desktop Runtime manually from dotnet.microsoft.com.
+en.InstallFail=.NET 10 installation failed (code
+
 [Tasks]
-Name: "autostart"; Description: "Применять режим VRR и LFC при входе в Windows"; GroupDescription: "Дополнительно:"
-Name: "desktopicon"; Description: "Ярлык на рабочем столе"; GroupDescription: "Дополнительно:"; Flags: unchecked
+Name: "autostart"; Description: "{cm:TaskAutostart}"; GroupDescription: "{cm:TaskGroupExtra}"
+Name: "desktopicon"; Description: "{cm:TaskDesktop}"; GroupDescription: "{cm:TaskGroupExtra}"; Flags: unchecked
 
 [Files]
 Source: "..\publish\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
@@ -49,7 +71,7 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 Filename: "{app}\{#AppExe}"; Parameters: "--set-autostart on"; Tasks: autostart; Flags: runhidden waituntilterminated
 Filename: "{app}\{#AppExe}"; Parameters: "--set-autostart off"; Tasks: not autostart; Flags: runhidden waituntilterminated
 Filename: "{app}\{#AppExe}"; Parameters: "--apply"; Tasks: autostart; Flags: runhidden waituntilterminated
-Filename: "{app}\{#AppExe}"; Description: "Открыть ArcSyncSwitch"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "{cm:RunOpen}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "{app}\{#AppExe}"; Parameters: "--quit"; RunOnceId: "QuitApp"; Flags: runhidden waituntilterminated
@@ -74,7 +96,7 @@ end;
 
 procedure InitializeWizard;
 begin
-  DownloadPage := CreateDownloadPage('Загрузка .NET 10', 'Для работы нужна среда .NET 10 Desktop Runtime от Microsoft.', nil);
+  DownloadPage := CreateDownloadPage(CustomMessage('DlTitle'), CustomMessage('DlDesc'), nil);
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -91,8 +113,8 @@ begin
       try
         DownloadPage.Download;
       except
-        SuppressibleMsgBox('Не удалось скачать .NET 10: ' + AddPeriod(GetExceptionMessage) + #13#10 +
-          'Установите .NET 10 Desktop Runtime вручную с dotnet.microsoft.com.', mbError, MB_OK, IDOK);
+        SuppressibleMsgBox(CustomMessage('DlFail') + ' ' + AddPeriod(GetExceptionMessage) + #13#10 +
+          CustomMessage('DlManual'), mbError, MB_OK, IDOK);
         Result := False;
         Exit;
       end;
@@ -102,7 +124,7 @@ begin
     if not ShellExec('', ExpandConstant('{tmp}\windowsdesktop-runtime-win-x64.exe'), '/install /quiet /norestart', '',
                      SW_SHOW, ewWaitUntilTerminated, Code) or not RuntimeInstalled then
     begin
-      SuppressibleMsgBox('.NET 10 не установился (код ' + IntToStr(Code) + ').', mbError, MB_OK, IDOK);
+      SuppressibleMsgBox(CustomMessage('InstallFail') + ' ' + IntToStr(Code) + ').', mbError, MB_OK, IDOK);
       Result := False;
     end;
   end;

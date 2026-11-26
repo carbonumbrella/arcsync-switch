@@ -29,9 +29,10 @@ namespace ArcSyncSwitch
             {
                 if (args[ai + 1] == "on")
                 {
+                    Lang.Apply(null, ArcSyncEngine.LoadConfig().Language);
                     string exe = Environment.ProcessPath ?? "";
                     if (!string.IsNullOrEmpty(exe))
-                        return LogonTask.Create(exe, "--apply", "Восстанавливает профиль Intel Arc Sync и состояние LFC при входе в систему") ? 0 : 1;
+                        return LogonTask.Create(exe, "--apply", Lang.S("TaskDesc")) ? 0 : 1;
                     return 1;
                 }
                 LogonTask.Delete();
@@ -52,7 +53,10 @@ namespace ArcSyncSwitch
                 bool? forceLight = null;
                 if (Array.IndexOf(args, "--light") >= 0) forceLight = true;
                 else if (Array.IndexOf(args, "--dark") >= 0) forceLight = false;
-                RenderPreview(args[ri + 1], forceLight);
+                string? forceLang = null;
+                if (Array.IndexOf(args, "--ru") >= 0) forceLang = "ru";
+                else if (Array.IndexOf(args, "--en") >= 0) forceLang = "en";
+                RenderPreview(args[ri + 1], forceLight, forceLang);
                 return 0;
             }
 
@@ -70,13 +74,22 @@ namespace ArcSyncSwitch
                 Source = new Uri("pack://application:,,,/ArcSyncSwitch;component/Theme.xaml")
             });
             Theme.Apply(app.Resources);
-            SystemEvents.UserPreferenceChanged += (_, _) =>
-                app.Dispatcher.BeginInvoke(() => Theme.Apply(app.Resources));
+            Lang.Apply(app.Resources, ArcSyncEngine.LoadConfig().Language);
 
             var showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
             var quitEvent = new EventWaitHandle(false, EventResetMode.ManualReset, QuitEventName);
             var win = new MainWindow();
             app.MainWindow = win;
+            SystemEvents.UserPreferenceChanged += (_, e) =>
+                app.Dispatcher.BeginInvoke(() =>
+                {
+                    Theme.Apply(app.Resources);
+                    if (e.Category == UserPreferenceCategory.Locale || Lang.Preference == "auto")
+                    {
+                        if (Lang.Apply(app.Resources, ArcSyncEngine.LoadConfig().Language))
+                            win.OnLanguageChanged();
+                    }
+                });
 
             var waiter = new Thread(() =>
             {
@@ -105,7 +118,7 @@ namespace ArcSyncSwitch
             return app.Run();
         }
 
-        static void RenderPreview(string outputPath, bool? forceLight)
+        static void RenderPreview(string outputPath, bool? forceLight, string? forceLang = null)
         {
             var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
@@ -114,6 +127,7 @@ namespace ArcSyncSwitch
                 Source = new Uri("pack://application:,,,/ArcSyncSwitch;component/Theme.xaml")
             });
             Theme.Apply(app.Resources, forceLight);
+            Lang.Apply(app.Resources, forceLang ?? ArcSyncEngine.LoadConfig().Language);
             var win = new MainWindow(previewOnly: true);
             win.SetPreviewState();
             var root = (FrameworkElement)win.Content;

@@ -20,6 +20,7 @@ namespace ArcSyncSwitch
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public VrrMode Mode { get; set; } = VrrMode.Full;
         public bool LfcEnabled { get; set; } = true;
+        public string Language { get; set; } = "auto";
     }
 
     public sealed class DriverSnapshot
@@ -244,7 +245,7 @@ namespace ArcSyncSwitch
             {
                 uint ac = 0;
                 r = ctlEnumerateDevices(api, ref ac, IntPtr.Zero);
-                if (r != 0 || ac == 0) throw new InvalidOperationException("Адаптер Intel не найден");
+                if (r != 0 || ac == 0) throw new InvalidOperationException(Lang.S("ErrNoAdapter"));
                 adapters = Marshal.AllocHGlobal((int)ac * IntPtr.Size);
                 ctlEnumerateDevices(api, ref ac, adapters);
 
@@ -270,7 +271,7 @@ namespace ArcSyncSwitch
                     }
                     finally { Marshal.FreeHGlobal(displays); }
                 }
-                throw new InvalidOperationException("Дисплей с поддержкой Intel Arc Sync не найден (проверьте родное разрешение)");
+                throw new InvalidOperationException(Lang.S("ErrNoArcDisplay"));
             }
             finally
             {
@@ -399,7 +400,7 @@ namespace ArcSyncSwitch
                     if (!string.IsNullOrEmpty(dev.DeviceID) && dev.DeviceID.Contains("VEN_8086", StringComparison.OrdinalIgnoreCase))
                         matches.Add(dev.DeviceName);
                 }
-                if (matches.Count == 0) throw new InvalidOperationException("Активный экран Intel не найден");
+                if (matches.Count == 0) throw new InvalidOperationException(Lang.S("ErrNoActiveDisplay"));
                 return matches[0];
             }
 
