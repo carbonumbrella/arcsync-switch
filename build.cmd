@@ -2,8 +2,8 @@
 setlocal
 cd /d "%~dp0"
 if not defined DOTNET (
-  where dotnet >nul 2>&1 && set "DOTNET=dotnet" || (
-    if exist "C:\Program Files\dotnet\dotnet.exe" (set "DOTNET=C:\Program Files\dotnet\dotnet.exe") else (set "DOTNET=C:\AI\dotnet\dotnet.exe")
+  dotnet --list-sdks 2>nul | findstr /b "10\." >nul && set "DOTNET=dotnet" || (
+    if exist "C:\AI\dotnet\dotnet.exe" (set "DOTNET=C:\AI\dotnet\dotnet.exe") else (set "DOTNET=dotnet")
   )
 )
 if not defined ISCC if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
