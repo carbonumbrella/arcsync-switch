@@ -1,0 +1,83 @@
+<Window x:Class="ArcSyncSwitch.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ArcSyncSwitch"
+        Title="ArcSyncSwitch" Icon="app.ico" Width="500" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13" Foreground="{DynamicResource Fg}">
+  <Border Style="{StaticResource Frame}">
+    <StackPanel Margin="22,16,22,20">
+      <Grid x:Name="TitleBar" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseDown">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="ArcSyncSwitch" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock x:Name="HeaderStatus" Foreground="{DynamicResource Sub}" FontSize="12" Margin="12,3,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Button x:Name="CloseBtn" Grid.Column="1" Style="{StaticResource Close}" Click="CloseBtn_Click" ToolTip="Закрыть"/>
+      </Grid>
+
+      <StackPanel Orientation="Horizontal" Margin="4,14,0,6">
+        <TextBlock Text="ПРОФИЛЬ VRR (INTEL ARC SYNC)" Style="{StaticResource Label}" Margin="0"/>
+        <local:HelpTip Text="Переключает рабочий профиль драйвера Intel напрямую через ControlLib.dll, не меняя EDID (разрешения 1600x1000 и 1536x960 сохраняются). Полный (48..120): снимает зажим 60 Гц. Сток (60..120): заводской режим Intel. Выкл: фиксированные 120 Гц без VRR. Важно для ClawTweaks: если в профиле игры в ClawTweaks включён тумблер VRR, он может сбрасывать режим обратно на стоковые 60..120 при запуске игры. Частоту (48/60/75/120) меняйте в ClawTweaks, а сам тумблер VRR там лучше не трогать."/>
+      </StackPanel>
+
+      <Border CornerRadius="14" Background="{DynamicResource Card}" Padding="14,12">
+        <StackPanel>
+          <Border Style="{StaticResource SegBox}">
+            <UniformGrid Rows="1">
+              <RadioButton x:Name="ModeFull" Content="Полный 48..120" GroupName="vrrmode" Style="{StaticResource Seg}" Checked="Mode_Checked"/>
+              <RadioButton x:Name="ModeStock" Content="Сток 60..120" GroupName="vrrmode" Style="{StaticResource Seg}" Checked="Mode_Checked"/>
+              <RadioButton x:Name="ModeOff" Content="Выкл (120)" GroupName="vrrmode" Style="{StaticResource Seg}" Checked="Mode_Checked"/>
+            </UniformGrid>
+          </Border>
+          <TextBlock x:Name="ModeDescription" Foreground="{DynamicResource Sub}" FontSize="12" TextWrapping="Wrap" Margin="2,8,2,0"/>
+        </StackPanel>
+      </Border>
+
+      <TextBlock Text="ПАРАМЕТРЫ ДРАЙВЕРА" Style="{StaticResource Label}"/>
+
+      <Border CornerRadius="14" Background="{DynamicResource Card}" Padding="14,4">
+        <StackPanel>
+          <Grid Margin="0,8">
+            <StackPanel Margin="0,0,56,0">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Компенсация низкого FPS (LFC)" FontWeight="SemiBold"/>
+                <local:HelpTip Text="Управляет внутренними флагами драйвера Intel (LowFpsSolutionEnabled и HighFpsSolutionEnabled) через D3DKMT. Включено: при падении ниже 48 FPS драйвер удваивает циклы обновления экрана (например 35 FPS идут на 70 Гц) для плавности. Выключено: убирает возможные x2 скачки драйвера внутри рабочего коридора 48..120 Гц, но при реальном падении ниже 48 FPS удвоения не будет."/>
+              </StackPanel>
+              <TextBlock x:Name="LfcSub" Foreground="{DynamicResource Sub}" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+            <CheckBox x:Name="LfcSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                      Checked="LfcSwitch_Changed" Unchecked="LfcSwitch_Changed"/>
+          </Grid>
+
+          <Border Height="1" Background="{DynamicResource Border}"/>
+
+          <Grid Margin="0,8">
+            <StackPanel Margin="0,0,56,0">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Применять при входе в Windows" FontWeight="SemiBold"/>
+                <local:HelpTip Text="Драйвер Intel сбрасывает профиль EXCELLENT и флаги LFC после перезагрузки или обновления драйвера. Включение создаёт задачу планировщика (без прав администратора, работает и в полноэкранной оболочке Xbox), которая при входе в систему тихо применяет выбранный режим (--apply) и сразу завершает работу с нулевой нагрузкой в фоне."/>
+              </StackPanel>
+              <TextBlock Text="Тихо восстанавливает режим при запуске системы и сразу закрывается" Foreground="{DynamicResource Sub}" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+            <CheckBox x:Name="AutostartSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                      Checked="AutostartSwitch_Changed" Unchecked="AutostartSwitch_Changed"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Grid Margin="2,14,2,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock x:Name="FooterStatus" Foreground="{DynamicResource Sub}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Margin="2,0,12,0"/>
+        <Button x:Name="RefreshBtn" Grid.Column="1" Content="Обновить" Style="{StaticResource Flat}" Click="RefreshBtn_Click"/>
+      </Grid>
+    </StackPanel>
+  </Border>
+</Window>

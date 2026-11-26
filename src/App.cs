@@ -1,0 +1,118 @@
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Microsoft.Win32;
+
+namespace ArcSyncSwitch
+{
+    public sealed class App : Application
+    {
+        const string ShowEventName = "Local\\ArcSyncSwitch.Show";
+        [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
+
+        [STAThread]
+        public static int Main(string[] args)
+        {
+            if (Array.IndexOf(args, "--apply") >= 0)
+            {
+                var cfg = ArcSyncEngine.LoadConfig();
+                var (ok, err, snap) = ArcSyncEngine.Apply(cfg.Mode, cfg.LfcEnabled, maxAttempts: 20, retryDelayMs: 1000);
+                ArcSyncEngine.Log($"Startup --apply mode={cfg.Mode} lfc={cfg.LfcEnabled} ok={ok} active={snap.ProfileName}({snap.ActiveMinHz}-{snap.ActiveMaxHz}) err={err}");
+                return ok ? 0 : 1;
+            }
+
+            int ri = Array.IndexOf(args, "--render");
+            if (ri >= 0 && ri + 1 < args.Length)
+            {
+                bool? forceLight = null;
+                if (Array.IndexOf(args, "--light") >= 0) forceLight = true;
+                else if (Array.IndexOf(args, "--dark") >= 0) forceLight = false;
+                RenderPreview(args[ri + 1], forceLight);
+                return 0;
+            }
+
+            using var mutex = new Mutex(true, "Local\\ArcSyncSwitch", out bool first);
+            if (!first)
+            {
+                AllowSetForegroundWindow(-1);
+                if (EventWaitHandle.TryOpenExisting(ShowEventName, out var ev)) ev.Set();
+                return 0;
+            }
+
+            var app = new App();
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary
+            {
+                Source = new Uri("pack://application:,,,/ArcSyncSwitch;component/Theme.xaml")
+            });
+            Theme.Apply(app.Resources);
+            SystemEvents.UserPreferenceChanged += (_, _) =>
+                app.Dispatcher.BeginInvoke(() => Theme.Apply(app.Resources));
+
+            var showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+            var win = new MainWindow();
+            app.MainWindow = win;
+
+            var waiter = new Thread(() =>
+            {
+                while (showEvent.WaitOne())
+                {
+                    app.Dispatcher.BeginInvoke(() =>
+                    {
+                        if (win.WindowState == WindowState.Minimized) win.WindowState = WindowState.Normal;
+                        win.Topmost = true;
+                        win.Show();
+                        win.Activate();
+                        win.Topmost = false;
+                    });
+                }
+            }) { IsBackground = true };
+            waiter.Start();
+
+            win.Show();
+            return app.Run();
+        }
+
+        static void RenderPreview(string outputPath, bool? forceLight)
+        {
+            var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
+            app.Resources.MergedDictionaries.Add(new ResourceDictionary
+            {
+                Source = new Uri("pack://application:,,,/ArcSyncSwitch;component/Theme.xaml")
+            });
+            Theme.Apply(app.Resources, forceLight);
+            var win = new MainWindow(previewOnly: true);
+            win.SetPreviewState();
+            var root = (FrameworkElement)win.Content;
+            win.Content = null;
+            var holder = new System.Windows.Controls.Border
+            {
+                Background = Brushes.Transparent,
+                Child = root,
+                Width = 500
+            };
+            holder.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "Fg");
+            holder.SetValue(System.Windows.Documents.TextElement.FontFamilyProperty, new FontFamily("Segoe UI Variable Text, Segoe UI"));
+            holder.SetValue(System.Windows.Documents.TextElement.FontSizeProperty, 13.0);
+            holder.Measure(new Size(500, double.PositiveInfinity));
+            holder.Arrange(new Rect(holder.DesiredSize));
+            holder.UpdateLayout();
+
+            int w = (int)Math.Ceiling(holder.ActualWidth * 1.5);
+            int h = (int)Math.Ceiling(holder.ActualHeight * 1.5);
+            var rtb = new RenderTargetBitmap(w, h, 144, 144, PixelFormats.Pbgra32);
+            rtb.Render(holder);
+
+            string? dir = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(rtb));
+            using var fs = File.Create(outputPath);
+            enc.Save(fs);
+        }
+    }
+}

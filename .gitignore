@@ -1,0 +1,9 @@
+bin/
+obj/
+publish/
+*.log
+*.user
+.vs/
+.venv/
+CREDENTIALS.md
+.env
