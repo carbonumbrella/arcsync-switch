@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2026-11-26: 1.0.0: Inno Setup installer and CLI lifecycle support
+
+- Added `installer\ArcSyncSwitch.iss` and Inno Setup 6 build integration in `build.cmd` producing `publish\installer\ArcSyncSwitch-Setup-1.0.0.0.exe`.
+- Added `--set-autostart on|off` and `--quit` CLI flags in `src\App.cs` for clean per-user installation, upgrades, and full uninstallation (terminates any running UI, deletes the `ArcSyncSwitch` logon task, and cleans `%APPDATA%\ArcSyncSwitch`).
+
 ## 2026-11-26: 1.0.0: Initial release of ArcSyncSwitch
 
 - Built a standalone .NET 10 WPF utility matching the SaySo visual design (rounded cards, dynamic Windows light/dark theme following, touch-friendly `?` HelpTip popups, custom title bar).

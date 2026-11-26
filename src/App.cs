@@ -12,11 +12,32 @@ namespace ArcSyncSwitch
     public sealed class App : Application
     {
         const string ShowEventName = "Local\\ArcSyncSwitch.Show";
+        const string QuitEventName = "Local\\ArcSyncSwitch.Quit";
         [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
 
         [STAThread]
         public static int Main(string[] args)
         {
+            if (Array.IndexOf(args, "--quit") >= 0)
+            {
+                if (EventWaitHandle.TryOpenExisting(QuitEventName, out var q)) q.Set();
+                return 0;
+            }
+
+            int ai = Array.IndexOf(args, "--set-autostart");
+            if (ai >= 0 && ai + 1 < args.Length)
+            {
+                if (args[ai + 1] == "on")
+                {
+                    string exe = Environment.ProcessPath ?? "";
+                    if (!string.IsNullOrEmpty(exe))
+                        return LogonTask.Create(exe, "--apply", "Восстанавливает профиль Intel Arc Sync и состояние LFC при входе в систему") ? 0 : 1;
+                    return 1;
+                }
+                LogonTask.Delete();
+                return 0;
+            }
+
             if (Array.IndexOf(args, "--apply") >= 0)
             {
                 var cfg = ArcSyncEngine.LoadConfig();
@@ -53,13 +74,21 @@ namespace ArcSyncSwitch
                 app.Dispatcher.BeginInvoke(() => Theme.Apply(app.Resources));
 
             var showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+            var quitEvent = new EventWaitHandle(false, EventResetMode.ManualReset, QuitEventName);
             var win = new MainWindow();
             app.MainWindow = win;
 
             var waiter = new Thread(() =>
             {
-                while (showEvent.WaitOne())
+                var handles = new WaitHandle[] { showEvent, quitEvent };
+                while (true)
                 {
+                    int idx = WaitHandle.WaitAny(handles);
+                    if (idx == 1)
+                    {
+                        app.Dispatcher.BeginInvoke(() => app.Shutdown());
+                        return;
+                    }
                     app.Dispatcher.BeginInvoke(() =>
                     {
                         if (win.WindowState == WindowState.Minimized) win.WindowState = WindowState.Normal;

@@ -18,4 +18,4 @@ Compact Intel Arc Sync (VRR) and LFC switcher for MSI Claw handhelds, built in t
 build.cmd
 ```
 
-Produces `publish\ArcSyncSwitch.exe` (single-file .NET 10 WPF executable).
+Produces `publish\ArcSyncSwitch.exe` (single-file .NET 10 WPF executable) and `publish\installer\ArcSyncSwitch-Setup-1.0.0.0.exe` (per-user Inno Setup 6 installer with uninstaller and `.NET 10` runtime check).
